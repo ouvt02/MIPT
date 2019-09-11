@@ -1,0 +1,7 @@
+*.out
+
+*.txt
+!onegin.txt
+
+html/
+latex/
