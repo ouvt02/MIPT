@@ -15,6 +15,8 @@ char** prepare_lines(char* buffer, size_t nstr,size_t length);
 int my_strcmp(const void* a, const void* b);
 int compares_lines(const void* line1, const void* line2);
 
+int Test_compare_lines();
+
 
 //! int main() 
 //! sorts lines alphabetically and according to rhyme
