@@ -4,6 +4,10 @@
 //!
 //! - quequatfumction.cpp
 
+
+#define TESTING if(false)
+
+
 #include <stdio.h>
 #include <math.h>
 #include <cassert>
@@ -26,7 +30,7 @@ bool is_equal(float a, float b, float diff)
 //! @param [out] x1 Pointer to the root
 //!
 //! @return Number of roots
-int lineequat(float c, float b, float* x1)
+int lineequat(float b, float c, float* x1)
 {
 	int nroots = 0;
 	if (b != 0)
@@ -64,13 +68,13 @@ int solve(float a, float b, float c, float* x1, float* x2)
 	int SS_INF_ROOTS = -1;
 	int nroots = 0;
 	if (is_equal(a, 0, 0.0001) && !is_equal(b, 0, 0.0001) && 
-													!is_equal(c, 0, 0.0001))
+		!is_equal(c, 0, 0.0001))
 	{
 		nroots = lineequat(b, c, x1);
-		return 0;
+		return nroots;
 	}
 	if (is_equal(a, 0, 0.0001) && is_equal(b, 0, 0.0001) && 
-														is_equal(c, 0, 0.0001))
+		is_equal(c, 0, 0.0001))
 	{
 		nroots = SS_INF_ROOTS;
 		return SS_INF_ROOTS;
@@ -80,8 +84,8 @@ int solve(float a, float b, float c, float* x1, float* x2)
 	if (D >= 0)
 	{
 		float kD = sqrt(D);
-		*x1 = (-b - kD) / 2;
-		*x2 = (-b + kD) / 2;
+		*x1 = (-b - kD) / (2 * a);
+		*x2 = (-b + kD) / (2 * a);
 		if (*x1 == *x2)
 			nroots = 1;
 		else
@@ -89,6 +93,9 @@ int solve(float a, float b, float c, float* x1, float* x2)
 	}
 	return nroots;
 } 
+
+#include "test_quequatfunction.hpp"
+
 //! int main()
 //!
 //! Gives solves of square equation ax2 + bx + c = 0
@@ -100,6 +107,8 @@ int solve(float a, float b, float c, float* x1, float* x2)
 //! @Note In case of error breaks function
 int main()
 {
+	TESTING test_quequatfunction();
+	
 	float a = 0;
 	float b = 0;
 	float c = 0;
