@@ -5,14 +5,7 @@
 //! - quequatfumction.cpp
 
 
-#define TESTING if(false)
-
-
-#include <stdio.h>
-#include <math.h>
-#include <cassert>
-
-const int SS_INF_ROOTS = -1;
+#include "includ.h"
 
 bool is_equal(float a, float b, float diff) 
 {
@@ -32,6 +25,9 @@ bool is_equal(float a, float b, float diff)
 //! @return Number of roots
 int lineequat(float b, float c, float* x1)
 {
+ 	assert(std::isfinite(b));
+    assert(std::isfinite(c));
+	assert(x1 != NULL);
 	int nroots = 0;
 	if (b != 0)
 	{
@@ -94,7 +90,6 @@ int solve(float a, float b, float c, float* x1, float* x2)
 	return nroots;
 } 
 
-#include "test_quequatfunction.hpp"
 
 //! int main()
 //!
