@@ -171,7 +171,7 @@ MyStr* prepare_lines(char** buffer, int nstr)
 			
 		*point = '\0';
 		
-		lines -> length = point - old_point;
+		lines -> length = point - old_point + 1;
 		
 		lines -> beginning_of_string = old_point;
 		
@@ -266,10 +266,10 @@ int my_comparator(const void* l1, const void* l2)
 {
 	MyStr* line1 = ((MyStr*) l1);
 	MyStr* line2 = ((MyStr*) l2);
-	
+
 	 
-	 char* pointer1 = line1 -> beginning_of_string + line1 -> length;
-	 char* pointer2 = line2 -> beginning_of_string + line2 -> length;
+	 char* pointer1 = line1 -> beginning_of_string + line1 -> length - 1;
+	 char* pointer2 = line2 -> beginning_of_string + line2 -> length - 1;
 	 
 	 while(true)
 	 {

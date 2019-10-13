@@ -46,11 +46,6 @@ int main()
 
 
 
-void unittest_qsort1()
-{
-	lines[]
-}
-
 //! int read_from_file(const char* name, char** buffer)
 //! reads symbols from file to array
 //!
