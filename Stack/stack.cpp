@@ -33,7 +33,7 @@ void stack_assert(Stack_t* stk);
 void stack_dump(Stack_t* stk);
 
 
-int main()
+/*int main()
 {
     int size = 4;
     Stack_t stk;
@@ -76,7 +76,7 @@ int main()
     printf("%d\n", stack_pop(&stk));
     
     return 0;
-}
+}*/
 
 
 
