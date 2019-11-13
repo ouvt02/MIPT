@@ -31,7 +31,10 @@ unsigned long long get_hash(const Stack_t* stk);
 int stack_OK(const Stack_t* stk);
 void stack_assert(Stack_t* stk);
 void stack_dump(Stack_t* stk);
-
+//TODO struct hash
+//TODO buffer canaries
+//TODO if in dumps
+//TODO dump is a part of stack struct 
 
 /*int main()
 {
