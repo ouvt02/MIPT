@@ -103,6 +103,7 @@ int* compilate_asm(char* buffer, int sizeoffile, )
 	int number_of_cmd = get_program_length(buffer, sizeoffile);
 	int* code = new int[number_of_cmd];
 	int j = 0;
+	char* next_word;
 	
 	for(i = 0; i < sizeoffile; i++)
 	{
@@ -152,9 +153,45 @@ int* compilate_asm(char* buffer, int sizeoffile, )
 		
 		else if(!strcmp(cmd, "pop"))
 		{
-			code[j] = POP_CMD;
+			new_cmd = read_word_buf(buffer, i);
+			
+			if(!strcmp(new_cmd, "ax") or !strcmp(new_cmd, bx) or 
+				!strcmp(new_cmd, cx) or !strcmp(new_cmd, dx))
+				code[j] = POPNX_CMD;
+			
+			
+			else 
+				code[j] = POP_CMD;
 			j++;
-		}/////////////////////////////////////////////////////////////////////
+		}
+		
+		else if(!strcmp(cmd, "push"))
+		{
+			new_cmd = read_word_buf(buffer, i);
+			
+			if(!strcmp(new_cmd, "ax") or !strcmp(new_cmd, bx) or 
+				!strcmp(new_cmd, cx) or !strcmp(new_cmd, dx))
+				code[j] = PUSHNX_CMD;
+			
+			
+			else 
+				code[j] = PUSH_CMD;
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "sin"))
+		{
+			code[j] = SIN_CMD;
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "cos"))
+		{
+			code[j] = COS_CMD;
+			j++;
+		}
+		
+		
 	}
 }
 
