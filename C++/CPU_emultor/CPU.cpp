@@ -116,6 +116,18 @@ virtual_cpu::~virtual_cpu()
 	}
 }
 
+int get_program_length(char* buffer, int sizeoffile)
+{
+	int number_of_cmd = 0;
+	
+	for(int i = 0 i < sizeoffile; i++)
+	{
+		if(buffer[i] == ' ' or buffer[i] == '\n')
+			number_of_cmd++;
+	}
+	
+	return number_of_cmd;
+}
 
 
 void virtual_cpu::execute()
@@ -124,7 +136,8 @@ void virtual_cpu::execute()
 	//float* proga = this -> RAM + 1024
 	float a = 0;
 	float b = 0;
-	
+	int number_of_cmd = 
+				get_program_length(this -> RAM + 1024, this -> proga_size);
 	//for(proga = this -> RAM + 1024; 
 	//	proga < this -> RAM + 1024 + this -> proga_size; i++)
 	for(this -> ip = 0; ip < number_of_cmd; )
