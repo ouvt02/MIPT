@@ -121,20 +121,22 @@ virtual_cpu::~virtual_cpu()
 void virtual_cpu::execute()
 
 {
-	float* proga = this -> RAM + 1024
+	//float* proga = this -> RAM + 1024
 	float a = 0;
 	float b = 0;
 	
-	for(proga = this -> RAM + 1024; 
-		proga < this -> RAM + 1024 + this -> proga_size; i++)
+	//for(proga = this -> RAM + 1024; 
+	//	proga < this -> RAM + 1024 + this -> proga_size; i++)
+	for(this -> ip = 0; ip < number_of_cmd; )
 	{
-		switch (&(proga))
+		//switch(&(proga))
+		switch((this -> RAM)[this -> ip])
 		{
 			case IN_CMD:
 			{
 				float written = 0;
-				scanf("%f", &a);
-				&(this -> sp) = a;
+				scanf("%f", &written);
+				&(this -> sp) = written;
 				(this -> sp)--;
 				(this -> ip)++;
 				break;
@@ -225,16 +227,20 @@ void virtual_cpu::execute()
 			
 			case POPNX_CMD:
 			{
-				if(&(++proga) == 1)
+				//if(&(++proga) == 1)
+				if((this -> RAM)[++(this -> ip)] == 1)
 					this -> ax = &(++(this -> sp));
 				
-				else if(&(++proga) == 2)
+				//else if(&(++proga) == 2)
+				else if((this -> RAM)[++(this -> ip)] == 2)
 					this -> bx = &(++(this -> sp));
 				
-				else if(&(++proga) == 3)
+				//else if(&(++proga) == 3)
+				else if((this -> RAM)[++(this -> ip)] == 3)
 					this -> cx = &(++(this -> sp));
 				
-				else if(&(++proga) == 4)
+				//else if(&(++proga) == 4)
+				else if((this -> RAM)[++(this -> ip)] == 4)
 					this -> dx = &(++(this -> sp));
 				
 				else
@@ -246,16 +252,20 @@ void virtual_cpu::execute()
 			
 			case PUSHNX_CMD:
 			{
-				if(&(++proga) == 1)
+				//if(&(++proga) == 1)
+				if((this -> RAM)[++(this -> ip)] == 1)
 					&((this -> sp)--) = this -> ax;
 				
-				else if(&(++proga) == 2)
+				//else if(&(++proga) == 2)
+				else if((this -> RAM)[++(this -> ip)] == 2)
 					&((this -> sp)--) = this -> bx;
 				
-				else if(&(++proga) == 3)
+				//else if(&(++proga) == 3)
+				else if((this -> RAM)[++(this -> ip)] == 3)
 					&((this -> sp)--) = this -> cx;
 				
-				else if(&(++proga) == 4)
+				//else if(&(++proga) == 4)
+				else if((this -> RAM)[++(this -> ip)] == 4)
 					&((this -> sp)--) = this -> dx;
 				
 				else
@@ -375,7 +385,7 @@ void virtual_cpu::execute()
 			}
 		}
 		
-		proga = this -> RAM + 1024 + ip;
+		//proga = this -> RAM + 1024 + ip;
 	}
 }
 
