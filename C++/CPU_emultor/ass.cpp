@@ -1,13 +1,45 @@
-#include <stdio.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 
-struct Label
+int getsize(const char* name);
+char* read_word_buf(char* buffer, int* i);
+
+
+
+class Assembler
 {
-	char* namel;
-	int address;
-}
 
-enum Commands
+  public:
+  
+	class label
+	{
+
+		friend Assembler;
+		
+	  protected:
+		char* name = nullptr;
+		int address = 0;
+		
+	  public:
+	  	label();
+	  	~label();
+	};
+
+  private:
+  
+  	label* my_labels = nullptr;
+  	int number_of_labels = 0;
+  	int* code = nullptr;
+  	int number_of_cmd = 0;
+  	
+  	char* name_of_file = nullptr;
+  	char* code_name = nullptr;
+  	int sizeoffile = 0;
+  	char* text_of_program = nullptr;
+  	
+  	enum Commands
 	{
 		IN_CMD = 1,
 		OUT_CMD,
@@ -30,25 +62,77 @@ enum Commands
 		JE_CMD,
 		JNE_CMD,
 		END_CMD
-	}
+	};
 	
-	
-	
-	
-char* program_text(const char* name_of_file)
+  public:
+  	
+  	Assembler(const char* file_name);
+  	~Assembler();
+  	void get_program_length();
+  	void make_labels();
+  	int find_adr_lbl(int* i);
+  	void compilate_asm();
+  	void write_code(const char* code_file_name);
+  	void open_file();
+};
+
+
+Assembler::label::label()
+{}
+
+
+Assembler::label::~label()
 {
-	int sizeoffile = getsize(name_of_file);
-	FILE* program_file = fopen(name_of_file, "rb");
+	if(this -> name != nullptr)
+		delete[] this -> name;
+}
+
 	
-	char* buffer = new char[sizeoffile];
-	fread(buffer, sizeof(char), sizeoffile, program_file);
-	
-	fclose(program_file);
-	
-	return buffer;
+Assembler::Assembler(const char* file_name)
+{
+	this -> name_of_file = new char[strlen(file_name) + 1]{0};
+	strcpy(this -> name_of_file, file_name);
 }
 
 
+
+Assembler::~Assembler()
+{
+	if(this -> name_of_file != NULL)
+		delete[] this -> name_of_file;
+		
+	if(this -> text_of_program != NULL)
+		delete[] this -> text_of_program;	
+	
+	if(this -> code != NULL)
+		delete[] this -> code;
+	
+}
+
+
+void Assembler::open_file()
+{
+	FILE* program_file = fopen(this -> name_of_file, "rb");
+	
+	this -> sizeoffile = getsize(this -> name_of_file);
+	this -> text_of_program = new char[this -> sizeoffile];
+	fread(text_of_program, sizeof(char), this -> sizeoffile, program_file);
+	
+	fclose(program_file);
+}
+
+int getsize(const char* name)
+{
+	FILE* file_proga = fopen(name, "rd");
+	
+	fseek(file_proga, 0, SEEK_END); //указатель на конец файла
+	
+	size_t sizeoffile = ftell (file_proga); //разница между началом и ук.
+	
+	rewind (file_proga); //возвращает поинтер на начало файла
+	
+	return sizeoffile;
+}
 
 
 char* read_word_buf(char* buffer, int* i)
@@ -60,142 +144,343 @@ char* read_word_buf(char* buffer, int* i)
 		(*i)++;
 		
 	int number_of_letters = 0;
-	while(buffer[*i] != ' ' and buffer[*i] != \'n')
+	while(buffer[*i] != ' ' and buffer[*i] != '\n')
 	{
 		if(number_of_letters >= size_of_cmd)
 		{
 			int new_size_of_cmd = size_of_cmd * 2;
-			char* new_cmd = new char[new_size_of_cmd]
+			char* new_cmd = new char[new_size_of_cmd];
 			for(int j = 0; j < size_of_cmd; j++)
-				new_cmd[j] = cmd[j];
-			delete[] cmd;
-			cmd = new_cmd;
+				new_cmd[j] = command[j];
+			delete[] command;
+			command = new_cmd;
 			size_of_cmd = new_size_of_cmd;
 		}
 		
-		cmd[number_of_letters] = buffer[*i];
+		command[number_of_letters] = buffer[*i];
 		number_of_letters++;
 		(*i)++;
 	}
 	
-	return cmd;
+	return command;
 }
 
 
-int get_program_length(char* buffer, int sizeoffile)
+void Assembler::get_program_length()
 {
-	int number_of_cmd = 0;
+	this -> number_of_cmd = 0;
 	
-	for(int i = 0 i < sizeoffile; i++)
+	for(int i = 0; i < this -> sizeoffile; i++)
 	{
-		if(buffer[i] == ' ' or buffer[i] == '\n')
-			number_of_cmd++;
+		if((this -> text_of_program)[i] == ' ' or 
+										(this -> text_of_program)[i] == '\n')
+			(this -> number_of_cmd)++;
+	}
+}
+
+
+void Assembler::make_labels()
+{
+	this -> number_of_labels = 10;
+	this -> my_labels = new Assembler::label[this -> number_of_labels];
+	
+	int length_of_title = 6;
+	char* data_title = new char[length_of_title];
+	
+	int counter_of_labels = 0;
+	int j = 0;
+	
+	char* new_data_title;
+	int new_length_title;
+	
+	label* new_labels;
+	int new_number_of_labels;
+	
+	for(int i = 0; i < this -> sizeoffile; i++)
+	{
+		if((this -> text_of_program)[i] == ' ' or 
+										(this -> text_of_program)[i] == '\n')
+			i++;
+			
+		if((this -> text_of_program)[i] == ':')
+		{
+			i++;
+			j = 0;
+			while((this -> text_of_program)[i] != ' ' or 
+										(this -> text_of_program)[i] != '\n')
+			{
+				if(j >= length_of_title)
+				{
+					new_length_title = length_of_title * 2;
+					new_data_title = new char[new_length_title];
+					
+					for(int k = 0; k < length_of_title; k++)
+						new_data_title[k] = data_title[k];
+						
+					data_title = new_data_title;
+					length_of_title = new_length_title;
+				}
+				
+				data_title[j] = (this -> text_of_program)[i];
+				j++;
+				i++;
+			}
+			
+			
+			(this -> my_labels)[counter_of_labels].name = new char[j];
+			strcpy((this -> my_labels)[counter_of_labels].name, data_title);
+			(this -> my_labels)[counter_of_labels].address = ++i;
+			
+			counter_of_labels++;
+			
+			if(counter_of_labels >= this -> number_of_labels)
+			{
+				new_number_of_labels = (this -> number_of_labels) * 2;
+				new_labels = new label[new_number_of_labels];
+				for(int k = 0; k < this -> number_of_labels; k++)
+					new_labels[k] = (this -> my_labels)[k];
+				delete[] this -> my_labels;
+				this -> my_labels = new_labels;
+				this -> number_of_labels = new_number_of_labels;
+			}
+			
+		}
+	}
+}
+
+
+int Assembler::find_adr_lbl(int* i)
+{
+	char* name_of_label = read_word_buf(this -> text_of_program, i);
+	int adr_lbl = 0;
+	
+	for(int k = 0; k < this -> number_of_labels; k++)
+	{
+		if(!strcmp(name_of_label, (this -> my_labels)[k].name))
+		{
+			adr_lbl = (this -> my_labels)[k].address;
+			break;
+		}
 	}
 	
-	return number_of_cmd;
+	return adr_lbl;
 }
 
 
-int* compilate_asm(char* buffer, int sizeoffile, )
+
+void Assembler::compilate_asm()
 {
 	int i = 0;
 	char* cmd;
-	int number_of_cmd = get_program_length(buffer, sizeoffile);
-	int* code = new int[number_of_cmd];
+	get_program_length();
+															
+	char* new_cmd;
+	
+	this -> code = new int[this -> number_of_cmd];
 	int j = 0;
 	char* next_word;
 	
-	for(i = 0; i < sizeoffile; i++)
+	make_labels();
+	
+	for(i = 0; i < this -> sizeoffile; i++)
 	{
-		cmd = read_word_buf(buffer, &i);
-		
+		cmd = read_word_buf(this -> text_of_program, &i);
+
 		if(!strcmp(cmd, "in"))
 		{
-			code[j] = IN_CMD;
+			(this -> code)[j] = IN_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "out"))
 		{
-			code[j] = OUT_CMD;
+			(this -> code)[j] = OUT_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "mul"))
 		{
-			code[j] = MUL_CMD;
+			(this -> code)[j] = MUL_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "div"))
 		{
-			code[j] = DIV_CMD;
+			(this -> code)[j] = DIV_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "add"))
 		{
-			code[j] = ADD_CMD;
+			(this -> code)[j] = ADD_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "sub"))
 		{
-			code[j] = SUB_CMD;
+			(this -> code)[j] = SUB_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "sqrt"))
 		{
-			code[j] = SQRT_CMD;
+			(this -> code)[j] = SQRT_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "pop"))
 		{
-			new_cmd = read_word_buf(buffer, i);
+			new_cmd = read_word_buf(this -> text_of_program, &i);
 			
-			if(!strcmp(new_cmd, "ax") or !strcmp(new_cmd, bx) or 
-				!strcmp(new_cmd, cx) or !strcmp(new_cmd, dx))
-				code[j] = POPNX_CMD;
+			if(!strcmp(new_cmd, "ax"))
+			{
+				(this -> code)[j] = POPNX_CMD;
+				(this -> code)[++j] = 1;
+			}
 			
+			else if(!strcmp(new_cmd, "bx"))
+			{
+				(this -> code)[j] = POPNX_CMD;
+				(this -> code)[++j] = 2;
+			}
 			
-			else 
-				code[j] = POP_CMD;
+			else if(!strcmp(new_cmd, "cx"))
+			{
+				(this -> code)[j] = POPNX_CMD;
+				(this -> code)[++j] = 3;
+			}
+			
+			else if(!strcmp(new_cmd, "dx"))
+			{
+				(this -> code)[j] = POPNX_CMD;
+				(this -> code)[++j] = 4;
+			}
+			
+			else
+			{
+				(this -> code)[j] = POP_CMD;
+				(this -> code)[++j] = atoi(new_cmd);
+			}
+				
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "push"))
 		{
-			new_cmd = read_word_buf(buffer, i);
+			new_cmd = read_word_buf(this -> text_of_program, &i);
 			
-			if(!strcmp(new_cmd, "ax") or !strcmp(new_cmd, bx) or 
-				!strcmp(new_cmd, cx) or !strcmp(new_cmd, dx))
-				code[j] = PUSHNX_CMD;
+			if(!strcmp(new_cmd, "ax"))
+			{
+				(this -> code)[j] = PUSHNX_CMD;
+				(this -> code)[++j] = 1;
+			}
 			
+			else if(!strcmp(new_cmd, "bx"))
+			{
+				(this -> code)[j] = PUSHNX_CMD;
+				(this -> code)[++j] = 2;
+			}
 			
-			else 
-				code[j] = PUSH_CMD;
+			else if(!strcmp(new_cmd, "cx"))
+			{
+				(this -> code)[j] = PUSHNX_CMD;
+				(this -> code)[++j] = 3;
+			}
+			
+			else if(!strcmp(new_cmd, "dx"))
+			{
+				(this -> code)[j] = PUSHNX_CMD;
+				(this -> code)[++j] = 4;
+			}
+			
+			else
+			{
+				(this -> code)[j] = PUSH_CMD;
+				(this -> code)[++j] = atoi(new_cmd);
+			}
+				
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "sin"))
 		{
-			code[j] = SIN_CMD;
+			(this -> code)[j] = SIN_CMD;
 			j++;
 		}
 		
 		else if(!strcmp(cmd, "cos"))
 		{
-			code[j] = COS_CMD;
+			(this -> code)[j] = COS_CMD;
 			j++;
 		}
 		
+		else if(!strcmp(cmd, "jmp"))
+		{
+			(this -> code)[j] = JMP_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
 		
+		else if(!strcmp(cmd, "ja"))
+		{
+			(this -> code)[j] = JA_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "jae"))
+		{
+			(this -> code)[j] = JAE_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "jb"))
+		{
+			(this -> code)[j] = JB_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "jbe"))
+		{
+			(this -> code)[j] = JBE_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "jn"))
+		{
+			(this -> code)[j] = JE_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "jne"))
+		{
+			(this -> code)[j] = JNE_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else
+			printf("unknown command\n");
 	}
 }
 
-
+void Assembler::write_code(const char* code_file_name)
+{
+	this -> code_name = new char[strlen(code_file_name) + 1]{0};
+	strcpy(this -> code_name, code_file_name);
+	
+	FILE* file_write_code = fopen(this -> code_name, "wb");
+	
+	for(int k = 0; k < this -> number_of_cmd; k++)
+		fprintf(file_write_code, "%d ", (this -> code)[k]);
+	fprintf(file_write_code, "\n");
+	
+	fclose(file_write_code);
+}
 
 
 
