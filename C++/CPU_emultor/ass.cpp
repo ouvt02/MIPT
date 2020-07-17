@@ -2,6 +2,12 @@
 #include <cstring>
 #include <cstdlib>
 
+#ifndef RELEASE
+	#define DEBUG printf("\x1b[35m>> debug from <%s::%d>\n\x1b[0m", __FILE__, __LINE__);
+#else
+	#define DEBUG
+#endif
+
 
 int getsize(const char* name);
 char* read_word_buf(char* buffer, int* i);
@@ -31,7 +37,7 @@ class Assembler
   
   	label* my_labels = nullptr;
   	int number_of_labels = 0;
-  	int* code = nullptr;
+  	float* code = nullptr;
   	int number_of_cmd = 0;
   	
   	char* name_of_file = nullptr;
@@ -74,6 +80,7 @@ class Assembler
   	void compilate_asm();
   	void write_code(const char* code_file_name);
   	void open_file();
+  	int get_nmb_of_labels();
 };
 
 
@@ -181,68 +188,36 @@ void Assembler::get_program_length()
 
 void Assembler::make_labels()
 {
-	this -> number_of_labels = 10;
-	this -> my_labels = new Assembler::label[this -> number_of_labels];
+	this -> number_of_labels = get_nmb_of_labels();
+	char* data_title;
 	
-	int length_of_title = 6;
-	char* data_title = new char[length_of_title];
-	
+	int position = 0;
 	int counter_of_labels = 0;
-	int j = 0;
 	
-	char* new_data_title;
-	int new_length_title;
-	
-	label* new_labels;
-	int new_number_of_labels;
+	this -> my_labels = new label[this -> number_of_labels];
 	
 	for(int i = 0; i < this -> sizeoffile; i++)
 	{
 		if((this -> text_of_program)[i] == ' ' or 
 										(this -> text_of_program)[i] == '\n')
-			i++;
-			
-		if((this -> text_of_program)[i] == ':')
 		{
 			i++;
-			j = 0;
-			while((this -> text_of_program)[i] != ' ' or 
-										(this -> text_of_program)[i] != '\n')
-			{
-				if(j >= length_of_title)
-				{
-					new_length_title = length_of_title * 2;
-					new_data_title = new char[new_length_title];
+			position++;
+		}
+		
+		if((this -> text_of_program)[i] == ':')
+		{	
+			i++;
+			position--;
+
+			data_title = read_word_buf(text_of_program, &i);
+			
+			(this -> my_labels)[counter_of_labels].name = new char[strlen(data_title) + 1]{0};	
 					
-					for(int k = 0; k < length_of_title; k++)
-						new_data_title[k] = data_title[k];
-						
-					data_title = new_data_title;
-					length_of_title = new_length_title;
-				}
-				
-				data_title[j] = (this -> text_of_program)[i];
-				j++;
-				i++;
-			}
-			
-			
-			(this -> my_labels)[counter_of_labels].name = new char[j];
 			strcpy((this -> my_labels)[counter_of_labels].name, data_title);
-			(this -> my_labels)[counter_of_labels].address = ++i;
+			(this -> my_labels)[counter_of_labels].address = ++position;
 			
 			counter_of_labels++;
-			
-			if(counter_of_labels >= this -> number_of_labels)
-			{
-				new_number_of_labels = (this -> number_of_labels) * 2;
-				new_labels = new label[new_number_of_labels];
-				for(int k = 0; k < this -> number_of_labels; k++)
-					new_labels[k] = (this -> my_labels)[k];
-				delete[] this -> my_labels;
-				this -> my_labels = new_labels;
-				this -> number_of_labels = new_number_of_labels;
-			}
 			
 		}
 	}
@@ -254,16 +229,39 @@ int Assembler::find_adr_lbl(int* i)
 	char* name_of_label = read_word_buf(this -> text_of_program, i);
 	int adr_lbl = 0;
 	
+	int j = 0;
+	
 	for(int k = 0; k < this -> number_of_labels; k++)
-	{
+	{		
 		if(!strcmp(name_of_label, (this -> my_labels)[k].name))
 		{
 			adr_lbl = (this -> my_labels)[k].address;
+			j++;
 			break;
 		}
 	}
 	
+	if(j == 0)
+	{
+		adr_lbl = -1;
+		printf("there is no matching label for %s\n", name_of_label);
+	}
+	
 	return adr_lbl;
+}
+
+int Assembler::get_nmb_of_labels()
+{
+	int number_of_labels = 0;
+	for(int i = 0; i < this -> sizeoffile; i++)
+	{
+		if((this -> text_of_program)[i] == ':')
+		{
+			(this -> number_of_cmd)--;
+			number_of_labels++;
+		}
+	}
+	return number_of_labels;
 }
 
 
@@ -275,8 +273,7 @@ void Assembler::compilate_asm()
 	get_program_length();
 															
 	char* new_cmd;
-	
-	this -> code = new int[this -> number_of_cmd];
+	this -> code = new float[this -> number_of_cmd]{0};
 	int j = 0;
 	char* next_word;
 	
@@ -285,7 +282,7 @@ void Assembler::compilate_asm()
 	for(i = 0; i < this -> sizeoffile; i++)
 	{
 		cmd = read_word_buf(this -> text_of_program, &i);
-
+		
 		if(!strcmp(cmd, "in"))
 		{
 			(this -> code)[j] = IN_CMD;
@@ -463,6 +460,9 @@ void Assembler::compilate_asm()
 			j++;
 		}
 		
+		else if(cmd[0] == ':')
+			continue;
+		
 		else
 			printf("unknown command\n");
 	}
@@ -476,7 +476,7 @@ void Assembler::write_code(const char* code_file_name)
 	FILE* file_write_code = fopen(this -> code_name, "wb");
 	
 	for(int k = 0; k < this -> number_of_cmd; k++)
-		fprintf(file_write_code, "%d ", (this -> code)[k]);
+		fprintf(file_write_code, "%g ", (this -> code)[k]);
 	fprintf(file_write_code, "\n");
 	
 	fclose(file_write_code);
