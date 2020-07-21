@@ -67,6 +67,8 @@ class Assembler
 		JBE_CMD,
 		JE_CMD,
 		JNE_CMD,
+		CALL_CMD,
+		RET_CMD,
 		END_CMD
 	};
 	
@@ -277,6 +279,8 @@ void Assembler::compilate_asm()
 	int j = 0;
 	char* next_word;
 	
+	int m = 0;
+	
 	make_labels();
 	
 	for(i = 0; i < this -> sizeoffile; i++)
@@ -327,6 +331,8 @@ void Assembler::compilate_asm()
 		
 		else if(!strcmp(cmd, "pop"))
 		{
+			m = i;
+			
 			new_cmd = read_word_buf(this -> text_of_program, &i);
 			
 			if(!strcmp(new_cmd, "ax"))
@@ -356,7 +362,7 @@ void Assembler::compilate_asm()
 			else
 			{
 				(this -> code)[j] = POP_CMD;
-				(this -> code)[++j] = atoi(new_cmd);
+				i = m;
 			}
 				
 			j++;
@@ -457,6 +463,19 @@ void Assembler::compilate_asm()
 		{
 			(this -> code)[j] = JNE_CMD;
 			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "call"))
+		{
+			(this -> code)[j] = CALL_CMD;
+			(this -> code)[++j] = find_adr_lbl(&i);
+			j++;
+		}
+		
+		else if(!strcmp(cmd, "ret"))
+		{
+			(this -> code)[j] = RET_CMD;
 			j++;
 		}
 		

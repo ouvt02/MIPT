@@ -1,21 +1,24 @@
 #include <stdio.h>
 #include <math.h>
-#include "stack.cpp"
+#include <cstring>
 
 
-class virtual_cpu
+class VirtualCPU
 {
   private:
 
-	float ax;
-	float bx;
-	float cx;
-	float dx;
-	int ip;
-	float* sp;
+	float ax = 0;
+	float bx = 0;
+	float cx = 0;
+	float dx = 0;
+	int ip = 0;
+	float* sp = nullptr;
 	
-	float* RAM;
-	int proga_size;
+	float* RAM = nullptr;
+	float* proga = nullptr;
+	int proga_size = 0;
+	char* file_proga_name = nullptr;
+	int size_of_proga_file = 0;
 	
   public:
 	enum Commands
@@ -40,35 +43,19 @@ class virtual_cpu
 		JBE_CMD,
 		JE_CMD,
 		JNE_CMD,
+		CALL_CMD,
+		RET_CMD,
 		END_CMD
-	}
+	};
 	
-	virtual_cpu();
-	~virtual_cpu();
+	VirtualCPU();
+	~VirtualCPU();
 	
-	void open();
+	void open(const char* proga_name);
 	void execute();
-	
-	
-/*	void in();
-	void out();
-	void mul();
-	void div();
-	void add();
-	void sub();
-	void sqrt();
-	void popnx(float** proga);
-	void pushnx(float** proga);
-	void sinus();
-	void cosinus();
-	void ja();
-	void jae();
-	void jb();
-	void jbe();
-	void je();
-	void jne();*/
-	
-}
+	void get_program_length(char* buffer);
+};
+
 
 int getsize(const char* name)
 {
@@ -83,178 +70,207 @@ int getsize(const char* name)
 	return sizeoffile;
 }
 
-void virtual_cpu::open(const char* proga_name)//in main
+char* read_word_buf(char* buffer, int* i)
 {
-	this -> proga_size = getsize(proga_name);
-	this -> RAM = new float [1024 + proga_size];
+	int size_of_cmd = 4;
+	char* command = new char[size_of_cmd];
 	
-	FILE* proga_file = fopen(proga_name, "rb");
-	float* proga = this -> RAM + 1024; 
-	fread(proga, sizeof(char), proga_size, proga_file);
-}
-
-
-virtual_cpu::virtual_cpu()
-{
-
-	this -> ip = 0;
-	this -> ax = 0;
-	this -> bx = 0;
-	this -> cx = 0;
-	this -> dx = 0;
-	this -> sp = (this -> RAM) + 1024;
-}
-
-
-virtual_cpu::~virtual_cpu()
-{
-	fclose(this -> file_code);
-	
-	if(this -> RAM != NULL)
+	if(buffer[*i] == ' ' or buffer[*i] == '\n')
+		(*i)++;
+		
+	int number_of_letters = 0;
+	while(buffer[*i] != ' ' and buffer[*i] != '\n')
 	{
+		if(number_of_letters >= size_of_cmd)
+		{
+			int new_size_of_cmd = size_of_cmd * 2;
+			char* new_cmd = new char[new_size_of_cmd];
+			for(int j = 0; j < size_of_cmd; j++)
+				new_cmd[j] = command[j];
+			delete[] command;
+			command = new_cmd;
+			size_of_cmd = new_size_of_cmd;
+		}
+		
+		command[number_of_letters] = buffer[*i];
+		number_of_letters++;
+		(*i)++;
+	}
+	
+	return command;
+}
+
+
+
+void VirtualCPU::get_program_length(char* buffer)
+{
+	this -> proga_size = 0;
+	
+	for(int i = 0; i < this -> size_of_proga_file; i++)
+	{
+		if(buffer[i] == ' ')
+			(this -> proga_size)++;
+	}
+}
+
+
+VirtualCPU::VirtualCPU()
+{}
+
+
+VirtualCPU::~VirtualCPU()
+{
+	if(this -> RAM != nullptr)
 		delete[] this -> RAM;
-	}
 }
 
-int get_program_length(char* buffer, int sizeoffile)
+
+void VirtualCPU::open(const char* proga_name)
 {
-	int number_of_cmd = 0;
+	this -> file_proga_name = new char[strlen(proga_name) + 1]{0};
+	strcpy(this -> file_proga_name, proga_name);
 	
-	for(int i = 0 i < sizeoffile; i++)
+	this -> size_of_proga_file = getsize(this -> file_proga_name);
+	
+	FILE* file_proga = fopen(this -> file_proga_name, "rb");
+	
+	char* buffer = new char[this -> size_of_proga_file];
+	fread(buffer, sizeof(char), this -> size_of_proga_file, file_proga);
+	
+	fclose(file_proga);	
+	
+	get_program_length(buffer);
+	this -> RAM = new float[1024 + this -> proga_size];
+	
+	this -> proga = this -> RAM + 1024;
+	this -> sp = this -> RAM + 1023;
+	
+	for(int i = 0; i < this -> size_of_proga_file; i++)
 	{
-		if(buffer[i] == ' ' or buffer[i] == '\n')
-			number_of_cmd++;
+		char* cmd = read_word_buf(buffer, &i);
+		*(this -> proga) = atof(cmd);
+		(this  -> proga)++;
 	}
 	
-	return number_of_cmd;
+	this -> proga = this -> RAM + 1024;
 }
 
-
-void virtual_cpu::execute()
-
+void VirtualCPU::execute()
 {
-	//float* proga = this -> RAM + 1024
+
 	float a = 0;
 	float b = 0;
-	int number_of_cmd = 
-				get_program_length(this -> RAM + 1024, this -> proga_size);
-	//for(proga = this -> RAM + 1024; 
-	//	proga < this -> RAM + 1024 + this -> proga_size; i++)
-	for(this -> ip = 0; ip < number_of_cmd; )
-	{
-		//switch(&(proga))
-		switch((this -> RAM)[this -> ip])
+	float c = 0;
+	
+	
+	for(this -> ip = 0; this -> ip < this -> proga_size; )
+	{	
+		switch((int)((this -> proga)[this -> ip]))
 		{
 			case IN_CMD:
 			{
-				float written = 0;
-				scanf("%f", &written);
-				&(this -> sp) = written;
-				(this -> sp)--;
+				scanf("%f", &a);
+				*((this -> sp)--) = a;
 				(this -> ip)++;
 				break;
 			}
 			
 			case OUT_CMD:
 			{
-				(this -> sp)++;
-				float outed = &(this -> sp);
-				printf("%f\n", a);
+				a = *(++(this -> sp));
+				printf("%g\n", a);
 				(this -> ip)++;
 				break;
 			}
 			
 			case MUL_CMD:
 			{
-				float mn1 = &(++(this -> sp));
-				float mn2 = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
-				float pr = mn1 * mn2;
+				c = a * b;
 				
-				&((this -> sp)--) = pr;
+				*((this -> sp)--) = c;
 				(this -> ip)++;
 				break;
 			}
 			
 			case DIV_CMD:
 			{
-				float delim = &(++(this -> sp));
-				float delit = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
-				float chastn = delim / delit;
+				c = a / b;
 				
-				&((this -> sp)--) = chastn;
+				*((this -> sp)--) = c;
 				(this -> ip)++;
 				break;
 			}
 			
 			case ADD_CMD:
 			{
-				float sl1 = &(++(this -> sp));
-				float sl2 = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
-				float summ = sl1 + sl2;
+				c = a + b;
 				
-				&((this -> sp)--) = summ;
+				*((this -> sp)--) = c;
 				(this -> ip)++;
 				break;
 			}
 			
 			case SUB_CMD:
 			{
-				float slr1 = &(++(this -> sp));
-				float slr2 = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
-				float razn = slr1 - slr2;
+				c = a - b;
 				
-				&((this -> sp)--) = razn;
+				*((this -> sp)--) = c;
 				(this -> ip)++;
 				break;
 			}
 			
 			case SQRT_CMD:
 			{
-				float perem = &(++(this -> sp));	
-				float sq = sqrtf(perem);
+				a = *(++(this -> sp));	
+				b = sqrtf(a);
 				
-				&((this -> sp)--) = sq;
+				*((this -> sp)--) = b;
 				(this -> ip)++;
 				break;
 			}
 			
 			case POP_CMD:
 			{
-				if(this -> sp < 1024)
-					(this -> sp)++;
+				//if(this -> sp < this -> RAM + 1023)
+				(this -> sp)++;
 				(this -> ip)++;
 				break;
 			}
 			
 			case PUSH_CMD:
 			{
-				if(this -> sp > 0)
-					(this -> sp)--;
+				//if(this -> sp > 0)
+				*(this -> sp) = ((this -> proga)[++(this -> ip)]);
+				(this -> sp)--;
 				(this -> ip)++;
 				break;
 			}
 			
 			case POPNX_CMD:
 			{
-				//if(&(++proga) == 1)
 				if((this -> RAM)[++(this -> ip)] == 1)
-					this -> ax = &(++(this -> sp));
-				
-				//else if(&(++proga) == 2)
+					this -> ax = *(++(this -> sp));
+
 				else if((this -> RAM)[++(this -> ip)] == 2)
-					this -> bx = &(++(this -> sp));
-				
-				//else if(&(++proga) == 3)
+					this -> bx = *(++(this -> sp));
+
 				else if((this -> RAM)[++(this -> ip)] == 3)
-					this -> cx = &(++(this -> sp));
-				
-				//else if(&(++proga) == 4)
+					this -> cx = *(++(this -> sp));
+
 				else if((this -> RAM)[++(this -> ip)] == 4)
-					this -> dx = &(++(this -> sp));
+					this -> dx = *(++(this -> sp));
 				
 				else
 					printf("Unknown command\n");
@@ -265,21 +281,17 @@ void virtual_cpu::execute()
 			
 			case PUSHNX_CMD:
 			{
-				//if(&(++proga) == 1)
 				if((this -> RAM)[++(this -> ip)] == 1)
-					&((this -> sp)--) = this -> ax;
+					*((this -> sp)--) = this -> ax;
 				
-				//else if(&(++proga) == 2)
 				else if((this -> RAM)[++(this -> ip)] == 2)
-					&((this -> sp)--) = this -> bx;
-				
-				//else if(&(++proga) == 3)
+					*((this -> sp)--) = this -> bx;
+
 				else if((this -> RAM)[++(this -> ip)] == 3)
-					&((this -> sp)--) = this -> cx;
-				
-				//else if(&(++proga) == 4)
+					*((this -> sp)--) = this -> cx;
+
 				else if((this -> RAM)[++(this -> ip)] == 4)
-					&((this -> sp)--) = this -> dx;
+					*((this -> sp)--) = this -> dx;
 				
 				else
 					printf("Unknown command\n");
@@ -290,104 +302,116 @@ void virtual_cpu::execute()
 			
 			case SIN_CMD:
 			{
-				(this -> sp)++;
-				a = &(this -> sp);
+				a = *(++(this -> sp));
 				b = sin(a);
-				&((this -> sp)--) = b;
+				*((this -> sp)--) = b;
 				(this -> ip)++;
 				break;
 			}
 			
 			case COS_CMD:
 			{
-				(this -> sp)++;
-				a = &(this -> sp);
+				a = *(++(this -> sp));
 				b = cos(a);
-				&((this -> sp)--) = b;
+				*((this -> sp)--) = b;
 				(this -> ip)++;
 				break;
 			}
 			
 			case JMP_CMD:
 			{
-				this -> ip = &(proga + 1);
+				this -> ip = (this -> proga)[++(this -> ip)];
 				break;
 			}
 			
 			case JA_CMD:
 			{
-				a = &(++(this -> sp));
-				b = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 
 				if(a > b)
-					(this -> ip) = &(++proga);
+					(this -> ip) = (this -> proga)[++(this -> ip)];
 				else
-					proga++;
+					++(this -> ip);
 				break;
 			}
 			
 			case JAE_CMD:
 			{
-				a = &(++(this -> sp));
-				b = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
 				if(a >= b)
-					(this -> ip) = &(++proga);
+					(this -> ip) = (this -> proga)[++(this -> ip)];
 				else
-					proga++;
+					++(this -> ip);
 				break;
 			}
 			
 			case JB_CMD:
 			{
-				a = &(++(this -> sp));
-				b = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
 				if(a < b)
-					(this -> ip) = &(++proga);
+					(this -> ip) = (this -> proga)[++(this -> ip)];
 				else
-					proga++;
+					++(this -> ip);
 				break;
 			}
 			
 			case JBE_CMD:
 			{
-				a = &(++(this -> sp));
-				b = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
 				if(a <= b)
-					(this -> ip) = &(++proga);
+					(this -> ip) = (this -> proga)[++(this -> ip)];
 				else
-					proga++;
+					++(this -> ip);
 				break;
 			}
 			
 			case JE_CMD:
 			{
-				a = &(++(this -> sp));
-				b = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
 				if(a == b)
-					(this -> ip) = &(++proga);
+					(this -> ip) = (this -> proga)[++(this -> ip)];
 				else
-					proga++;
+					++(this -> ip);
 				break;
 			}
 			
 			case JNE_CMD:
 			{
-				a = &(++(this -> sp));
-				b = &(++(this -> sp));
+				a = *(++(this -> sp));
+				b = *(++(this -> sp));
 				
 				if(a != b)
-					(this -> ip) = &(++proga);
+					(this -> ip) = (this -> proga)[++(this -> ip)];
 				else
-					proga++;
+					++(this -> ip);
+				break;
+			}
+			
+			case CALL_CMD:
+			{
+				*((this -> sp)--) = (this -> ip);
+				this -> ip = (this -> proga)[++(this -> ip)];
+				break;				
+			}
+			
+			case RET_CMD:
+			{
+				this -> ip = *(++(this -> sp));
 				break;
 			}
 			
 			case END_CMD:
 			{
+				(this -> ip)++;
 				break;
 			}
 			
@@ -397,214 +421,32 @@ void virtual_cpu::execute()
 				break;
 			}
 		}
-		
-		//proga = this -> RAM + 1024 + ip;
 	}
+	
 }
 
-/*void virtual_cpu::in()
-{
-	float a = 0;
-	scanf("%f", &a);
-	&(this -> sp) = a;
-	(this -> sp)--;
-}*/
-
-/*void virtual_cpu::out()
-{
-	(this -> sp)++;
-	float a = &(this -> sp);
-	printf("%f\n", a);
-}*/
-
-/*void virtual_cpu::mul()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	float c = a * b;
-	
-	&((this -> sp)--) = c;
-}*/
 
 
-/*void virtual_cpu::div()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	float c = a / b;
-	
-	&((this -> sp)--) = c;
-}*/
-
-/*void virtual_cpu::add()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	float c = a + b;
-	
-	&((this -> sp)--) = c;
-}*/
-
-/*void virtual_cpu::sub()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	float c = a - b;
-	
-	&((this -> sp)--) = c;
-}*/
-
-/*void virtual_cpu::sqrt()
-{
-	float a = &(++(this -> sp));	
-	float c = sqrtf(a);
-	
-	&((this -> sp)--) = c;
-}*/
-
-/*void virtual_cpu::ja()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	if(a > b)
-		(this -> ip) = &(++proga);
-	else
-		proga++;
-}*/
-
-/*void virtual_cpu::jae()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	if(a >= b)
-		(this -> ip) = &(++proga);
-	else
-		proga++;
-}*/
-
-/*void virtual_cpu::jb()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	if(a < b)
-		(this -> ip) = &(++proga);
-	else
-		proga++;
-}*/
-
-/*void virtual_cpu::jbe()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	if(a <= b)
-		(this -> ip) = &(++proga);
-	else
-		proga++;
-}*/
-
-/*void virtual_cpu::je()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	if(a == b)
-		(this -> ip) = &(++proga);
-	else
-		proga++;
-}*/
-
-/*void virtual_cpu::jne()
-{
-	float a = &(++(this -> sp));
-	float b = &(++(this -> sp));
-	
-	if(a != b)
-		(this -> ip) = &(++proga);
-	else
-		proga++;
-}*/
 
 
-/*void virtual_cpu::pop()
-{
-	if(this -> sp < 1024)
-		(this -> sp)++;
-}*/
-
-/*void virtual_cpu::push()
-{
-	if(this -> sp > 0)
-		(this -> sp)--;
-}*/
-
-/*void virtual_cpu::popnx(float** proga)//из стека в регистр
-{
-	if(&(++(&proga)) == 1)
-	{
-		this -> ax = &(++(this -> sp));
-		return;
-	}
-	
-	if(&(++(&proga)) == 2)
-	{
-		this -> bx = &(++(this -> sp));
-		return;
-	}
-	
-	if(&(++(&proga)) == 3)
-	{
-		this -> cx = &(++(this -> sp));
-		return;
-	}
-	
-	if(&(++(&proga)) == 4)
-	{
-		this -> dx = &(++(this -> sp));
-		return;
-	}
-	
-	printf("Unknown command\n");
-	return;
-}*/
 
 
-/*void virtual_cpu::pushnx(float** proga)
-{
-	if(&(++(&proga)) == 1)
-	{
-		&((this -> sp)--) = this -> ax;
-		return;
-	}
-	
-	if(&(++(&proga)) == 2)
-	{
-		&((this -> sp)--) = this -> bx;
-		return;
-	}
-	
-	if(&(++(&proga)) == 3)
-	{
-		&((this -> sp)--) = this -> cx;
-		return;
-	}
-	
-	if(&(++(&proga)) == 4)
-	{
-		&((this -> sp)--) = this -> dx;
-		return;
-	}
-	
-	printf("Unknown command\n");
-	return;
-}*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
